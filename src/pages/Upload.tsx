@@ -2,13 +2,18 @@ import React, { useState } from 'react';
     import { Upload as UploadIcon } from 'lucide-react';
     import { useNavigate } from 'react-router-dom';
     import { usePapers } from '../contexts/PaperContext';
+    import { useAuth } from '../contexts/AuthContext';
 
     export function Upload() {
       const [isDragging, setIsDragging] = useState(false);
       const [file, setFile] = useState<File | null>(null);
       const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+      const [title, setTitle] = useState('');
+      const [authors, setAuthors] = useState('');
+      const [email, setEmail] = useState('');
       const navigate = useNavigate();
       const { addPaper } = usePapers();
+      const { user } = useAuth();
 
       const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
@@ -40,18 +45,24 @@ import React, { useState } from 'react';
       };
 
       const handleUpload = async () => {
-        if (file) {
+        if (file && user) {
           const newPaper = {
-            title: file.name.replace(/\.[^/.]+$/, ''),
-            authors: [],
-            abstract: 'No abstract available',
+            title: title || file.name.replace(/\.[^/.]+$/, ''),
+            authors: authors ? authors.split(',').map((author) => author.trim()) : ['Default Author'],
+            abstract: 'Default Abstract',
             pdfUrl: previewUrl || '',
             status: 'new',
             notes: [],
             uploadDate: new Date().toLocaleDateString(),
+            userId: user.uid,
+            email: email || user.email || 'no-email@provided.com',
           };
-          await addPaper(newPaper);
-          navigate('/reviews');
+          try {
+            const docRef = await addPaper(newPaper);
+            navigate(`/paper/${docRef.id}`);
+          } catch (error) {
+            console.error('Error adding paper:', error);
+          }
         }
       };
 
@@ -96,6 +107,54 @@ import React, { useState } from 'react';
           {previewUrl && (
             <div className="max-w-xl mx-auto mt-8 p-6 border rounded-lg">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">File Preview</h2>
+              <div className="mb-4">
+                <label
+                  className="block text-gray-700 text-sm font-bold mb-2"
+                  htmlFor="title"
+                >
+                  Title
+                </label>
+                <input
+                  type="text"
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  placeholder="Paper Title"
+                />
+              </div>
+              <div className="mb-4">
+                <label
+                  className="block text-gray-700 text-sm font-bold mb-2"
+                  htmlFor="authors"
+                >
+                  Authors
+                </label>
+                <input
+                  type="text"
+                  id="authors"
+                  value={authors}
+                  onChange={(e) => setAuthors(e.target.value)}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  placeholder="Author Names (comma separated)"
+                />
+              </div>
+              <div className="mb-4">
+                <label
+                  className="block text-gray-700 text-sm font-bold mb-2"
+                  htmlFor="email"
+                >
+                  Email
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  placeholder="Email"
+                />
+              </div>
               <iframe
                 src={previewUrl}
                 title="File Preview"

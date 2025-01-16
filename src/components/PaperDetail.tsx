@@ -2,29 +2,36 @@ import React, { useState, useEffect } from 'react';
     import { Brain, Plus, CheckCircle, Edit } from 'lucide-react';
     import type { Paper, Note } from '../types';
     import { usePapers } from '../contexts/PaperContext';
+    import { useParams } from 'react-router-dom';
 
-    interface PaperDetailProps {
-      paper: Paper;
-      onAddNote: (note: string) => void;
-      onRequestAiReview: () => void;
-    }
+    interface PaperDetailProps {}
 
-    export function PaperDetail({ paper, onAddNote, onRequestAiReview }: PaperDetailProps) {
+    export function PaperDetail({}: PaperDetailProps) {
+      const { papers, updatePaper } = usePapers();
+      const { id } = useParams();
+      const paper = papers.find((paper) => paper.id === id);
       const [newNote, setNewNote] = useState('');
-      const [notes, setNotes] = useState<Note[]>(paper.notes || []);
-      const [status, setStatus] = useState(paper.status);
+      const [notes, setNotes] = useState<Note[]>([]);
+      const [status, setStatus] = useState<'new' | 'reviewed'>('new');
       const [showFallback, setShowFallback] = useState(false);
       const [isEditing, setIsEditing] = useState(false);
-      const [editedTitle, setEditedTitle] = useState(paper.title);
-      const [editedAuthors, setEditedAuthors] = useState(paper.authors.join(', '));
-      const { updatePaper } = usePapers();
+      const [editedTitle, setEditedTitle] = useState('');
+      const [editedAuthors, setEditedAuthors] = useState('');
+      const [editedAbstract, setEditedAbstract] = useState('');
 
       useEffect(() => {
-        setNotes(paper.notes || []);
-        setStatus(paper.status);
-        setEditedTitle(paper.title);
-        setEditedAuthors(paper.authors.join(', '));
+        if (paper) {
+          setNotes(paper.notes || []);
+          setStatus(paper.status);
+          setEditedTitle(paper.title);
+          setEditedAuthors(paper.authors.join(', '));
+          setEditedAbstract(paper.abstract);
+        }
       }, [paper]);
+
+      if (!paper) {
+        return <div className="p-4">Paper not found</div>;
+      }
 
       const handleAddNote = () => {
         if (newNote.trim()) {
@@ -34,7 +41,6 @@ import React, { useState, useEffect } from 'react';
             timestamp: new Date().toLocaleString(),
           };
           setNotes((prevNotes) => [...prevNotes, noteToAdd]);
-          onAddNote(newNote);
           setNewNote('');
           updatePaper(paper.id, { notes: [...notes, noteToAdd] });
         }
@@ -57,8 +63,16 @@ import React, { useState, useEffect } from 'react';
       const handleSaveClick = async () => {
         setIsEditing(false);
         const updatedAuthors = editedAuthors.split(',').map((author) => author.trim());
-        if (editedTitle !== paper.title || updatedAuthors.join(',') !== paper.authors.join(',')) {
-          await updatePaper(paper.id, { title: editedTitle, authors: updatedAuthors });
+        if (
+          editedTitle !== paper.title ||
+          updatedAuthors.join(',') !== paper.authors.join(',') ||
+          editedAbstract !== paper.abstract
+        ) {
+          await updatePaper(paper.id, {
+            title: editedTitle,
+            authors: updatedAuthors,
+            abstract: editedAbstract,
+          });
         }
       };
 
@@ -66,6 +80,7 @@ import React, { useState, useEffect } from 'react';
         setIsEditing(false);
         setEditedTitle(paper.title);
         setEditedAuthors(paper.authors.join(', '));
+        setEditedAbstract(paper.abstract);
       };
 
       return (
@@ -143,14 +158,26 @@ import React, { useState, useEffect } from 'react';
 
             <div className="mb-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-2">Abstract</h2>
-              <p className="text-gray-700">{paper.abstract}</p>
+              {isEditing ? (
+                <textarea
+                  value={editedAbstract}
+                  onChange={(e) => setEditedAbstract(e.target.value)}
+                  className="w-full text-gray-700 border border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                />
+              ) : (
+                <p className="text-gray-700">{paper.abstract}</p>
+              )}
+            </div>
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Email</h2>
+              <p className="text-gray-700">{paper.email}</p>
             </div>
 
             <div className="mb-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">Notes</h2>
                 <button
-                  onClick={onRequestAiReview}
+                  onClick={() => {}}
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
                 >
                   <Brain className="h-4 w-4 mr-2" />

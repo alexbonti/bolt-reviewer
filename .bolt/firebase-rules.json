@@ -1,0 +1,12 @@
+{
+      "rules": {
+        "papers": {
+          ".read": "auth != null && query.where('userId', '==', auth.uid)",
+          ".write": "auth != null && request.resource.data.userId == auth.uid",
+          "$paperId": {
+            ".read": "auth != null && resource.data.userId == auth.uid",
+            ".write": "auth != null && resource.data.userId == auth.uid"
+          }
+        }
+      }
+    }
